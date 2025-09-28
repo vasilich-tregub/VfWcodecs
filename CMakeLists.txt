@@ -15,7 +15,7 @@ project ("VfWcodecs")
 
 add_subdirectory("MRLE")
 add_subdirectory("RLEcodec")
-add_subdirectory("JXScodec")
+add_subdirectory("JXS21122codec")
 add_subdirectory("SvtJXScodec")
 
 # TODO: Add tests and install targets if needed.

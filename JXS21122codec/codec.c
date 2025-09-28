@@ -1,3 +1,4 @@
+#include "JXScodec.h"
 #include "libjxs/libjxs.h"
 #include "file_io.h" // definitions in jxs_utils.lib
 #include <malloc.h>
@@ -6,7 +7,14 @@
 #include <stdlib.h>
 #include <string.h>
 
-#include "JXScodec.h"
+xs_config_t xs_config;
+xs_image_t image = { 0 };
+xs_enc_context_t* ctx = NULL;
+uint8_t* bitstream_buf = NULL;
+size_t bitstream_buf_size, bitstream_buf_max_size;
+
+const int32_t width = 320;
+const int32_t height = 240;
 
 bool xs_parse_u8array_(uint8_t* values, int max_items, char* cfg_str, int* num)
 {
@@ -27,13 +35,56 @@ bool xs_parse_u8array_(uint8_t* values, int max_items, char* cfg_str, int* num)
 	return *cfg_str == 0;
 }
 
-int jxs_encode(char* out, const char* in, int insz)
+// byte size of image data
+// usually just the biSizeImage member
+static int compute_size(const BITMAPINFOHEADER* h)
 {
-	xs_config_t xs_config;
-	xs_image_t image = { 0 };
-	uint8_t* bitstream_buf = NULL;
-	size_t bitstream_buf_size, bitstream_buf_max_size;
-	xs_enc_context_t* ctx = NULL;
+    if (h->biSizeImage)
+        return h->biSizeImage;
+    if (h->biCompression == BI_RGB)
+    {
+        int pitch = h->biWidth * h->biBitCount / 8;
+        // adjust to mod 4
+        pitch = (pitch + 3) & ~3;
+        // height < 0 means vflip, so strip it here
+        if (h->biHeight < 0)
+            return pitch * -h->biHeight;
+        else
+            return pitch * h->biHeight;
+    }
+    return 1;
+}
+
+LRESULT jxsvfw_compress_query(PBITMAPINFO bin, PBITMAPINFO bout)
+{
+    if (compute_size(&bin->bmiHeader) < 0)
+        return 0;
+    return 1;
+}
+
+
+LRESULT jxsvfw_compress_get_format(PBITMAPINFO bin, PBITMAPINFO bout)
+{
+    if (!jxsvfw_compress_query(bin, bout))
+        return ICERR_OK;
+
+    memcpy(bout, bin, bin->bmiHeader.biSize);
+    bout->bmiHeader.biCompression = mmioFOURCC('j', 'x', 's', ' ');
+    bout->bmiHeader.biSizeImage = 2 * bin->bmiHeader.biSizeImage;
+
+    return 1;
+}
+
+LRESULT jxsvfw_compress_max_size(PBITMAPINFO bin, PBITMAPINFO bout)
+{
+    return bin->bmiHeader.biSizeImage * 2;
+}
+
+LRESULT jxsvfw_compress_begin(PBITMAPINFO bin, PBITMAPINFO bout)
+{
+	if (!jxsvfw_compress_query(bin, bout))
+		return 0;
+
 	int ret = 0;
 	int file_idx = 0;
 
@@ -42,8 +93,6 @@ int jxs_encode(char* out, const char* in, int insz)
 
 	do
 	{
-		const int32_t width = 320;
-		const int32_t height = 240;
 		const uint32_t depth = 8;
 		const uint32_t bpp = 3;
 		xs_config.verbose = 0; // options.verbose;
@@ -58,27 +107,6 @@ int jxs_encode(char* out, const char* in, int insz)
 		//word_size = (bytesRead == nsamples444 * 2) ? 16 : 8;
 		if (!xs_allocate_image(&image, false))
 			return -1;
-
-		uint32_t* ptr0 = image.comps_array[0];
-		uint32_t* ptr1 = image.comps_array[1];
-		uint32_t* ptr2 = image.comps_array[2];
-		// YUV444
-		for (int iy = 0; iy < height; ++iy) {
-			for (int ix = 0; ix < width; ++ix) {
-				ptr0[iy * width + ix] = (*in + 16 + iy * 480 / height + ix * 480 / width) % 256;   // Y
-				ptr1[iy * width + ix] = 128;   // Cb
-				ptr2[iy * width + ix] = 128;   // Cr
-			}
-		}
-
-		/*printf("Source image:\n");
-		for (int iy = 0; iy < height; ++iy) {
-			for (int ix = 0; ix < width; ++ix) {
-				printf("%d ", (unsigned char*)ptr0[iy * width + ix]);
-			}
-			printf("\n");
-		}
-		printf("\n");*/
 
 		xs_config.bitstream_size_in_bytes = -1;// (size_t)(bpp * image.width * image.height / 8);
 		xs_config.ra_budget_lines = 20.0f;
@@ -170,23 +198,33 @@ int jxs_encode(char* out, const char* in, int insz)
 			break;
 		}
 
-		do {
-			if (!xs_enc_image(ctx, 0, &image, (uint8_t*)out/*bitstream_buf*/, bitstream_buf_max_size, &bitstream_buf_size))
-			{
-				fprintf(stderr, "Unable to encode image\n");
-				ret = -1;
-				break;
-			}
-			return bitstream_buf_size;
-			/*if (fileio_write(output_fn, bitstream_buf, bitstream_buf_size) < 0)
-			{
-				fprintf(stderr, "Unable to write output encoded codestream to %s\n", output_fn);
-				ret = -1;
-				break;
-			}*/
-		} while (false);
 	} while (false);
 
+	return 1;
+}
+
+LRESULT jxsvfw_compress_frames_info(ICCOMPRESSFRAMES* icc, size_t* iccsz)
+{
+    return ICERR_OK;
+}
+
+LRESULT jxsvfw_compress(ICCOMPRESS* icc, size_t iccsz)
+{
+    size_t sz = compute_size(icc->lpbiInput);
+    size_t outsize = 0;
+    if (sz < 0)
+        return ICERR_OK;
+
+
+    *icc->lpdwFlags = AVIIF_KEYFRAME;
+    jxs_compress((icc->lpOutput), &outsize, icc->lpInput, sz);
+    icc->lpbiOutput->biSizeImage = (DWORD)outsize;
+
+    return 1;
+}
+
+LRESULT jxsvfw_compress_end()
+{
 	// Cleanup.
 	xs_free_image(&image);
 	if (ctx)
@@ -197,12 +235,113 @@ int jxs_encode(char* out, const char* in, int insz)
 	{
 		free(bitstream_buf);
 	}
+	return 1;
+}
+
+/*Decompressor*/
+
+LRESULT jxsvfw_decompress_query(PBITMAPINFO bin, PBITMAPINFO bout)
+{
+    if (compute_size(&bin->bmiHeader) < 0)
+        return ICERR_OK;
+
+    return ICERR_OK;
+}
+
+LRESULT jxsvfw_decompress_get_format(PBITMAPINFO bin, PBITMAPINFO bout)
+{
+    //if (!jxsvfw_decompress_query(bin, bout))
+        //return 0;
+
+    if (bout == NULL)
+    {
+        return bin->bmiHeader.biWidth * bin->bmiHeader.biHeight;
+    }
+
+    memcpy(bout, bin, bin->bmiHeader.biSize);
+    bout->bmiHeader.biCompression = BI_RGB;
+    bout->bmiHeader.biSizeImage = bin->bmiHeader.biWidth * bin->bmiHeader.biHeight * 3;
+
+    return 1;
+}
+
+LRESULT jxsvfw_decompress_max_size(PBITMAPINFO bin, PBITMAPINFO bout)
+{
+    return ((bin->bmiHeader.biWidth + 15) & ~15) * ((bout->bmiHeader.biHeight + 31) & ~31) * 3 + 4096;
+}
+
+LRESULT jxsvfw_decompress_begin(PBITMAPINFO bin, PBITMAPINFO bout)
+{
+    if (!jxsvfw_decompress_query(bin, bout))
+        return ICERR_OK;
+
+    return 1;
 
 }
 
-int jxs_decode(char* out, const char* in, int l)
+LRESULT jxsvfw_decompress(ICDECOMPRESS* icc, size_t iccsz)
 {
-	return -1;
+    int sz = compute_size(icc->lpbiInput);
+    if (sz < 0)
+        return ICERR_OK;
+
+    icc->lpbiOutput->biSizeImage = sz;
+
+    size_t outsize = 0;
+    icc->dwFlags = AVIIF_KEYFRAME;
+    jxs_decompress((icc->lpOutput), &outsize, icc->lpInput, sz);
+    icc->lpbiOutput->biSizeImage = (DWORD)outsize;
+
+    return 1;
+}
+
+LRESULT jxsvfw_decompress_end()
+{
+    return 1;
+}
+
+int jxs_encode(char* out, const char* in, int insz)
+{
+	int ret = 0;
+
+	uint32_t* ptr0 = image.comps_array[0];
+	uint32_t* ptr1 = image.comps_array[1];
+	uint32_t* ptr2 = image.comps_array[2];
+	// YUV444
+	for (int iy = 0; iy < height; ++iy) {
+		for (int ix = 0; ix < width; ++ix) {
+			ptr0[iy * width + ix] = (*in + 16 + iy * 480 / height + ix * 480 / width) % 256;   // Y
+			ptr1[iy * width + ix] = 128;   // Cb
+			ptr2[iy * width + ix] = 128;   // Cr
+		}
+	}
+
+	/*printf("Source image:\n");
+	for (int iy = 0; iy < height; ++iy) {
+		for (int ix = 0; ix < width; ++ix) {
+			printf("%d ", (unsigned char*)ptr0[iy * width + ix]);
+		}
+		printf("\n");
+	}
+	printf("\n");*/
+
+	do {
+		if (!xs_enc_image(ctx, 0, &image, (uint8_t*)out/*bitstream_buf*/, bitstream_buf_max_size, &bitstream_buf_size))
+		{
+			fprintf(stderr, "Unable to encode image\n");
+			ret = -1;
+			break;
+		}
+		return bitstream_buf_size;
+		/*if (fileio_write(output_fn, bitstream_buf, bitstream_buf_size) < 0)
+		{
+			fprintf(stderr, "Unable to write output encoded codestream to %s\n", output_fn);
+			ret = -1;
+			break;
+		}*/
+	} while (false);
+
+	return ret;
 }
 
 int jxs_compress(LPVOID dst, size_t* outsz, LPVOID src, size_t insz)
@@ -211,8 +350,3 @@ int jxs_compress(LPVOID dst, size_t* outsz, LPVOID src, size_t insz)
 	return 0;
 }
 
-int jxs_decompress(LPVOID dst, size_t* outsz, LPVOID src, size_t insz)
-{
-	*outsz = jxs_decode(dst, src, (int)insz);
-	return 0;
-}

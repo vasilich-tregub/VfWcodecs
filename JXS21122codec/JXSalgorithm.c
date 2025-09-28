@@ -1,0 +1,20 @@
+#include "libjxs/libjxs.h"
+#include "file_io.h" // definitions in jxs_utils.lib
+#include <malloc.h>
+#include <stdbool.h>
+#include <stdio.h>
+#include <stdlib.h>
+#include <string.h>
+
+#include "JXScodec.h"
+
+int jxs_decode(char* out, const char* in, int l)
+{
+	return -1;
+}
+
+int jxs_decompress(LPVOID dst, size_t* outsz, LPVOID src, size_t insz)
+{
+	*outsz = jxs_decode(dst, src, (int)insz);
+	return 0;
+}
