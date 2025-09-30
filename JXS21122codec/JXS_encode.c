@@ -46,8 +46,8 @@ int main(int argc, char** argv)
 
 	do
 	{
-		const int32_t width = 64;
-		const int32_t height = 16;
+		const int32_t width = 320;
+		const int32_t height = 240;
 		const uint32_t depth = 8;
 		const uint32_t bpp = 12;
 		xs_config.verbose = 0; // options.verbose;

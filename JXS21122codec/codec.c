@@ -310,9 +310,10 @@ int jxs_encode(char* out, const char* in, int insz)
 	// YUV444
 	for (int iy = 0; iy < height; ++iy) {
 		for (int ix = 0; ix < width; ++ix) {
-			ptr0[iy * width + ix] = *in++;
-			ptr1[iy * width + ix] = *in++;
-			ptr2[iy * width + ix] = *in++;
+			ptr0[iy * width + ix] = *in & 0xFF;;
+			ptr1[iy * width + ix] = *(in + 1) & 0xFF;
+			ptr2[iy * width + ix] = *(in + 2) & 0xFF;
+			in += 3;
 		}
 	}
 
