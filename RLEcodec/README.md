@@ -3,3 +3,4 @@ Like the code in MRLE folder, the RLEcodec codec project is also inspired by an 
 
 It uses [**a code for run-length encoding borrowed from the Rosetta Code project**](https://rosettacode.org/wiki/Run-length_encoding/C).
 
+The underlying RLE compressor is implemented in this project (RLEalgorithm.c).
