@@ -235,7 +235,6 @@ int jxs_encode(char* out, const char* in, int insz)
         //printf("bitstream output: pointer: %p bitstream size: %u\n", enc_output.bitstream.buffer, enc_output.bitstream.used_size);
         memcpy(out, enc_output.bitstream.buffer, enc_output.bitstream.used_size);
         retsize = enc_output.bitstream.used_size;
-        //fwrite(enc_output.bitstream.buffer, 1, enc_output.bitstream.used_size, output_file);
     }
 
     return retsize;

@@ -113,12 +113,6 @@ int main()
     HRESULT hr;
     for (int f = 0; f < nframes; f++)
     {
-        for (int i = 0; i < (int)lpbiIn->biSizeImage; ++i)
-        {
-            bits[i++] = ((f + 1) * ((i + 5) / 5)) % 256;
-            bits[i++] = 128;
-            bits[i] = 128;
-        }
         for (int iy = 0; iy < lpbiIn->biHeight; ++iy)
         {
             for (int ix = 0; ix < lpbiIn->biWidth; ++ix)

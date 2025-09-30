@@ -88,7 +88,7 @@ int main(int argc, char** argv)
 		xs_config.bitstream_size_in_bytes = -1;// (size_t)(bpp * image.width * image.height / 8);
 		xs_config.ra_budget_lines = 20.0f;
 		xs_config.verbose = 3;// 255;
-		xs_config.gains_mode = XS_GAINS_OPT_EXPLICIT;
+		xs_config.gains_mode = XS_GAINS_OPT_PSNR;
 		xs_config.profile = XS_PROFILE_UNRESTRICTED;
 		xs_config.level = XS_LEVEL_UNRESTRICTED;
 		xs_config.sublevel = XS_SUBLEVEL_UNRESTRICTED;
@@ -107,8 +107,8 @@ int main(int argc, char** argv)
 		xs_config.p.B_r = 4; // Number of bits to encode a bit-plane count in raw
 		xs_config.p.Fslc = 0; // Slice coding mode
 		xs_config.p.Ppoc = 0; // Progression order of bands within precincts
-		xs_config.p.NLx = 1;
-		xs_config.p.NLy = 0;
+		xs_config.p.NLx = 5;
+		xs_config.p.NLy = 2;
 		xs_config.p.Lh = 0; // long precinct header enforcement flag (0 or 1)
 		xs_config.p.Rl = 0; // 1 is raw mode selection per packet; 0 is no RAW_PER_PKT
 		xs_config.p.Qpih = 0; // 0 deadzone; 1 uniform
@@ -125,7 +125,7 @@ int main(int argc, char** argv)
 		else if (xs_config.p.NLx == 4)
 			xs_parse_u8array_(xs_config.p.lvl_gain[0], MAX_NBANDS, "1,1,1,1,1", 0); //  "1,0,0,1,0,0" "1,1,0,0,0,0"; "2,2,2,1,1,1"
 		else if (xs_config.p.NLx == 5)
-			xs_parse_u8array_(xs_config.p.lvl_gain[0], MAX_NBANDS, "0,0,0,0,0,0", 0); //  "1,0,0,1,0,0" "1,1,0,0,0,0"; "2,2,2,1,1,1"
+			xs_parse_u8array_(xs_config.p.lvl_gain[0], MAX_NBANDS, "1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1", 0); //  "1,0,0,1,0,0" "1,1,0,0,0,0"; "2,2,2,1,1,1"
 		memset(xs_config.p.lvl_prio[0], 255, (MAX_NBANDS + 1) * sizeof(uint8_t));
 		if (xs_config.p.NLx == 1)
 			xs_parse_u8array_(xs_config.p.lvl_prio[0], MAX_NBANDS, "0,1,0,1,0,1", 0); // "0,2,3,1,4,5" "0,1,2,4,3,5"; "8,7,6,5,3,4"
@@ -136,7 +136,7 @@ int main(int argc, char** argv)
 		else if (xs_config.p.NLx == 4)
 			xs_parse_u8array_(xs_config.p.lvl_prio[0], MAX_NBANDS, "0,1,2,3,4", 0); // "0,2,3,1,4,5" "0,1,2,4,3,5"; "8,7,6,5,3,4"
 		else if (xs_config.p.NLx == 5)
-			xs_parse_u8array_(xs_config.p.lvl_prio[0], MAX_NBANDS, "0,0,0,0,0,0", 0); // "0,2,3,1,4,5" "0,1,2,4,3,5"; "8,7,6,5,3,4"
+			xs_parse_u8array_(xs_config.p.lvl_prio[0], MAX_NBANDS, "0,1,2,3,4,5,1,2,3,4,5,6,1,2,3,4,5,6,1,2,3,4,5,6,1,2,3,4,5,6", 0); // "0,2,3,1,4,5" "0,1,2,4,3,5"; "8,7,6,5,3,4"
 		xs_config.p.Tnlt = XS_NLT_NONE;
 		xs_config.p.Tnlt_params.quadratic.sigma = 0; xs_config.p.Tnlt_params.quadratic.alpha = 0;
 		xs_config.p.Tnlt_params.extended.T1 = 0; xs_config.p.Tnlt_params.extended.T2 = 0; xs_config.p.Tnlt_params.extended.E = 0;

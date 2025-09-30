@@ -130,8 +130,8 @@ LRESULT jxsvfw_compress_begin(PBITMAPINFO bin, PBITMAPINFO bout)
 		xs_config.p.B_r = 4; // Number of bits to encode a bit-plane count in raw
 		xs_config.p.Fslc = 0; // Slice coding mode
 		xs_config.p.Ppoc = 0; // Progression order of bands within precincts
-		xs_config.p.NLx = 1;
-		xs_config.p.NLy = 0;
+		xs_config.p.NLx = 5; // when changing NLx,
+		xs_config.p.NLy = 2; // NLy params, adjust lvl_gain/prio accordingly
 		xs_config.p.Lh = 0; // long precinct header enforcement flag (0 or 1)
 		xs_config.p.Rl = 0; // 1 is raw mode selection per packet; 0 is no RAW_PER_PKT
 		xs_config.p.Qpih = 0; // 0 deadzone; 1 uniform
@@ -148,7 +148,7 @@ LRESULT jxsvfw_compress_begin(PBITMAPINFO bin, PBITMAPINFO bout)
 		else if (xs_config.p.NLx == 4)
 			xs_parse_u8array_(xs_config.p.lvl_gain[0], MAX_NBANDS, "1,1,1,1,1", 0); //  "1,0,0,1,0,0" "1,1,0,0,0,0"; "2,2,2,1,1,1"
 		else if (xs_config.p.NLx == 5)
-			xs_parse_u8array_(xs_config.p.lvl_gain[0], MAX_NBANDS, "0,0,0,0,0,0", 0); //  "1,0,0,1,0,0" "1,1,0,0,0,0"; "2,2,2,1,1,1"
+			xs_parse_u8array_(xs_config.p.lvl_gain[0], MAX_NBANDS, "1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1", 0); //  "1,0,0,1,0,0" "1,1,0,0,0,0"; "2,2,2,1,1,1"
 		memset(xs_config.p.lvl_prio[0], 255, (MAX_NBANDS + 1) * sizeof(uint8_t));
 		if (xs_config.p.NLx == 1)
 			xs_parse_u8array_(xs_config.p.lvl_prio[0], MAX_NBANDS, "0,1,0,1,0,1", 0); // "0,2,3,1,4,5" "0,1,2,4,3,5"; "8,7,6,5,3,4"
@@ -159,7 +159,7 @@ LRESULT jxsvfw_compress_begin(PBITMAPINFO bin, PBITMAPINFO bout)
 		else if (xs_config.p.NLx == 4)
 			xs_parse_u8array_(xs_config.p.lvl_prio[0], MAX_NBANDS, "0,1,2,3,4", 0); // "0,2,3,1,4,5" "0,1,2,4,3,5"; "8,7,6,5,3,4"
 		else if (xs_config.p.NLx == 5)
-			xs_parse_u8array_(xs_config.p.lvl_prio[0], MAX_NBANDS, "0,0,0,0,0,0", 0); // "0,2,3,1,4,5" "0,1,2,4,3,5"; "8,7,6,5,3,4"
+			xs_parse_u8array_(xs_config.p.lvl_prio[0], MAX_NBANDS, "0,1,2,3,4,5,1,2,3,4,5,6,1,2,3,4,5,6,1,2,3,4,5,6,1,2,3,4,5,6", 0); // "0,2,3,1,4,5" "0,1,2,4,3,5"; "8,7,6,5,3,4"
 		xs_config.p.Tnlt = XS_NLT_NONE;
 		xs_config.p.Tnlt_params.quadratic.sigma = 0; xs_config.p.Tnlt_params.quadratic.alpha = 0;
 		xs_config.p.Tnlt_params.extended.T1 = 0; xs_config.p.Tnlt_params.extended.T2 = 0; xs_config.p.Tnlt_params.extended.E = 0;
@@ -310,20 +310,11 @@ int jxs_encode(char* out, const char* in, int insz)
 	// YUV444
 	for (int iy = 0; iy < height; ++iy) {
 		for (int ix = 0; ix < width; ++ix) {
-			ptr0[iy * width + ix] = (*in + 16 + iy * 480 / height + ix * 480 / width) % 256;   // Y
-			ptr1[iy * width + ix] = 128;   // Cb
-			ptr2[iy * width + ix] = 128;   // Cr
+			ptr0[iy * width + ix] = *in++;
+			ptr1[iy * width + ix] = *in++;
+			ptr2[iy * width + ix] = *in++;
 		}
 	}
-
-	/*printf("Source image:\n");
-	for (int iy = 0; iy < height; ++iy) {
-		for (int ix = 0; ix < width; ++ix) {
-			printf("%d ", (unsigned char*)ptr0[iy * width + ix]);
-		}
-		printf("\n");
-	}
-	printf("\n");*/
 
 	do {
 		if (!xs_enc_image(ctx, 0, &image, (uint8_t*)out/*bitstream_buf*/, bitstream_buf_max_size, &bitstream_buf_size))
@@ -333,12 +324,6 @@ int jxs_encode(char* out, const char* in, int insz)
 			break;
 		}
 		return bitstream_buf_size;
-		/*if (fileio_write(output_fn, bitstream_buf, bitstream_buf_size) < 0)
-		{
-			fprintf(stderr, "Unable to write output encoded codestream to %s\n", output_fn);
-			ret = -1;
-			break;
-		}*/
 	} while (false);
 
 	return ret;

@@ -24,7 +24,7 @@ adding SvtJpegxs to ffmpeg in my repo https://github.com/vasilich-tregub/SVT-JPE
 OpenVisualCloud's SVT-JPEG-XS repo.
 
 I started this work while being rather sceptical about its practical usefulness. But, while doing 
-debugging, I was examining avi files produced by both ffmpeg and with VfW AVI. An ffmpeg-produced 
+debugging, I had to examine avi files produced by both ffmpeg and with VfW AVI. An ffmpeg-produced 
 avi file is typically rather ugly clutter of headers and chunks, some avi chunks are empty blocks 
 (JUNK) devoid of useful data. The two-character code in data chunk identifiers of video stream 
 differs for compressed ('dc') and uncompressed ('db') files, and this difference seems to be 

@@ -111,14 +111,23 @@ int main()
     unsigned char* bits = (unsigned char*)malloc(lpbiIn->biSizeImage);
     LPVOID lpInput = (LPVOID)bits;
     HRESULT hr;
-    for (int frame = 0; frame < nframes; frame++)
+    for (int f = 0; f < nframes; f++)
     {
         /*for (int i = 0; i < (int)lpbiIn->biSizeImage; ++i)
             bits[i] = (frame + 1) * ((i + 5) / 5);*/
-        bits[0] = frame;
+        //bits[0] = frame;
+        for (int iy = 0; iy < lpbiIn->biHeight; ++iy)
+        {
+            for (int ix = 0; ix < lpbiIn->biWidth; ++ix)
+            {
+                bits[3 * (iy * lpbiIn->biWidth + ix) + 0] = (f + 16 + iy * 480 / lpbiIn->biHeight + ix * 480 / lpbiIn->biWidth) % 256;
+                bits[3 * (iy * lpbiIn->biWidth + ix) + 1] = 128;
+                bits[3 * (iy * lpbiIn->biWidth + ix) + 2] = 128;
+            }
+        }
         ICCompress(hIC, 0, lpbiOut, lpOutput, lpbiIn, lpInput,
-            &dwCkID, &dwCompFlags, frame, lpbiIn->biSizeImage, dwQuality, NULL, NULL);
-        hr = AVIStreamWrite(pStream, frame, 1, lpOutput, lpbiOut->biSizeImage,
+            &dwCkID, &dwCompFlags, f, lpbiIn->biSizeImage, dwQuality, NULL, NULL);
+        hr = AVIStreamWrite(pStream, f, 1, lpOutput, lpbiOut->biSizeImage,
             AVIIF_KEYFRAME, &lSamplesWritten, &lBytesWritten);
         if (hr != S_OK)
         {
