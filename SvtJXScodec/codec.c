@@ -210,9 +210,10 @@ int jxs_encode(char* out, const char* in, int insz)
         {
             for (int ix = 0; ix < enc.source_width; ++ix)
             {
-                *((unsigned char*)in_buf.data_yuv[0] + (iy * enc.source_width + ix)) = *in++;
-                *((unsigned char*)in_buf.data_yuv[1] + (iy * enc.source_width + ix)) = *in++;
-                *((unsigned char*)in_buf.data_yuv[2] + (iy * enc.source_width + ix)) = *in++;
+                *((char*)in_buf.data_yuv[0] + (iy * enc.source_width + ix)) = *in;
+                *((char*)in_buf.data_yuv[1] + (iy * enc.source_width + ix)) = *(in + 1);
+                *((char*)in_buf.data_yuv[2] + (iy * enc.source_width + ix)) = *(in + 2);
+                in += 3;
             }
         }
 

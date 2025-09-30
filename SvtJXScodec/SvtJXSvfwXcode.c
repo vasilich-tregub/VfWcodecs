@@ -185,7 +185,19 @@ int main()
     {
         index = i - iFirstFrame;
         hr = AVIStreamRead(pStreamRead, index, 1, lpBuffer, bih.biSizeImage, NULL, NULL);
-        ICCompress(hIC, 0, lpbiOut, lpOutput, lpbiIn, lpBuffer,
+        for (int ix = 0; ix < bih.biSizeImage; ix += 3)
+        {
+            int B = *((char*)lpBuffer + ix) & 0xff;
+            int G = *((char*)lpBuffer + ix + 1) & 0xff;
+            int R = *((char*)lpBuffer + ix + 2) & 0xff;
+            char Y = 0.257 * R + 0.504 * G + 0.098 * B + 16;
+            char U = -0.148 * R - 0.291 * G + 0.439 * B + 128;
+            char V = 0.439 * R - 0.368 * G - 0.071 * B + 128;
+            *((char*)lpBuffer + ix) = Y;
+            *((char*)lpBuffer + ix + 1) = U;
+            *((char*)lpBuffer + ix + 2) = V;
+        }
+        ICCompress(hIC, 0, lpbiOut, lpOutput, lpbiIn, lpBuffer,        
             &dwCkID, &dwCompFlags, index, lpbiIn->biSizeImage, dwQuality, NULL, NULL);
         hr = AVIStreamWrite(pStreamWrite, index, 1, lpOutput, lpbiOut->biSizeImage,
             AVIIF_KEYFRAME, &lSamplesWritten, &lBytesWritten);
